@@ -59,8 +59,98 @@ Add JWT Authentication
 
 ### Add JWT settings in Appsettings.json
 Add a new object for Jwt inside the **'appsettings.json'**
+```
   "Jwt":{
-      "Key" :"",
-      "Issuer" : ""
+      "Key" :"YourSecretKeyHere",
+      "Issuer" : "YourIssuerHere"
   }
+```
 
+### Generate JWT Token:
+Create method to generate JWT tokens for authenticated users.
+  ```
+    public string GenerateToken(string userId)
+{
+    // Create a new symmetric security key using the secret key from the configuration
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+
+    // Create signing credentials using the security key and specifying the HMAC SHA-256 algorithm
+    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+    // Define the claims to be included in the token
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, userId),  // Subject claim, typically the user ID
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())  // JWT ID claim, unique identifier for the token
+    };
+
+    // Create the JWT token with specified parameters
+    var token = new JwtSecurityToken(
+        issuer: _config["Jwt:Issuer"],  // The issuer of the token, typically your authentication server
+        audience: _config["Jwt:Issuer"],  // The audience of the token, typically your API
+        claims: claims,  // The claims to be included in the token
+        expires: DateTime.Now.AddMinutes(30),  // Set the expiration time for the token
+        signingCredentials: credentials  // The signing credentials, which include the key and algorithm
+    );
+
+    // Serialize the token to a string format and return it
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
+
+  ```
+
+#### Explanation
+  1. **Method Definition:**
+     ```
+       public string GenerateToken(string userId)
+     ```
+Defines a method GenerateToken that takes a userId as input and returns a JWT token as a string.
+Create a Security Key:
+
+csharp
+Copy code
+var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+Encoding.UTF8.GetBytes(_config["Jwt:Key"]): Converts the JWT key from the configuration file to a byte array.
+new SymmetricSecurityKey(...): Creates a new symmetric security key using this byte array.
+Create Signing Credentials:
+
+csharp
+Copy code
+var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256): Creates signing credentials using the security key and the HMAC SHA-256 algorithm.
+Define Claims:
+
+csharp
+Copy code
+var claims = new[]
+{
+    new Claim(JwtRegisteredClaimNames.Sub, userId),
+    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+};
+new Claim(JwtRegisteredClaimNames.Sub, userId): Creates a claim with the subject (sub) claim type, using the userId provided.
+new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()): Creates a claim with the JWT ID (jti) claim type, using a new GUID for uniqueness.
+Create the JWT Token:
+
+csharp
+Copy code
+var token = new JwtSecurityToken(
+    issuer: _config["Jwt:Issuer"],
+    audience: _config["Jwt:Issuer"],
+    claims: claims,
+    expires: DateTime.Now.AddMinutes(30),
+    signingCredentials: credentials
+);
+issuer: _config["Jwt:Issuer"]: Sets the issuer of the token from the configuration.
+audience: _config["Jwt:Issuer"]: Sets the audience of the token from the configuration.
+claims: claims: Adds the claims defined earlier to the token.
+expires: DateTime.Now.AddMinutes(30): Sets the token's expiration time to 30 minutes from the current time.
+signingCredentials: credentials: Signs the token with the specified credentials.
+Serialize and Return the Token:
+
+csharp
+Copy code
+return new JwtSecurityTokenHandler().WriteToken(token);
+new JwtSecurityTokenHandler().WriteToken(token): Serializes the JWT token to a string.
+return: Returns the serialized token string.
+Summary
+This method generates a JWT token using the secret key and issuer specified in your configuration. It includes claims for the subject (user ID) and a unique identifier (JWT ID), signs the token with HMAC SHA-256, and sets an expiration time of 30 minutes. The resulting token is returned as a string.
